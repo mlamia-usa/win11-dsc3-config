@@ -51,7 +51,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [string]$ConfigurationUrl = "https://raw.githubusercontent.com/yourorg/yourrepo/main/TimeZone-Config.dsc.yaml",
+    [string]$ConfigurationUrl = "https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/TimeZone-Config.dsc.yaml",
     
     [Parameter(Mandatory = $false)]
     [ValidateSet("Test", "Set", "Get")]
