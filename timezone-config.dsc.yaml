@@ -1,0 +1,179 @@
+# ==============================================================================
+# DSC 3.0 Configuration Document
+# ==============================================================================
+# 
+# Configuration Name: Windows 11 Management Device - Initial Setup
+# Purpose: Configure timezone to Central Standard Time (Chicago)
+# Author: IT Administrator
+# Version: 1.0.0
+# Last Modified: 2025-10-31
+#
+# Description:
+#   This configuration document sets the system timezone to Central Standard Time.
+#   It uses the ComputerManagementDsc PowerShell DSC resource through the
+#   Microsoft.Windows/WindowsPowerShell adapter, which is required for MOF-based
+#   DSC resources.
+#
+# Prerequisites:
+#   - Microsoft DSC 3.0 installed
+#   - ComputerManagementDsc module installed
+#   - Administrator privileges
+#   - Windows 11 operating system
+#
+# Usage:
+#   Test:  dsc config test --file TimeZone-Config.dsc.yaml
+#   Apply: dsc config set --file TimeZone-Config.dsc.yaml
+#   Get:   dsc config get --file TimeZone-Config.dsc.yaml
+#
+# ==============================================================================
+
+# Schema declaration - defines the structure and validation rules for this document
+$schema: https://raw.githubusercontent.com/PowerShell/DSC/main/schemas/v3.0.0/config/document.json
+
+# ==============================================================================
+# METADATA SECTION
+# ==============================================================================
+# Optional metadata for documentation and tracking purposes
+metadata:
+  configurationVersion: "1.0.0"
+  description: "Initial configuration for Windows 11 management devices - Timezone setup"
+  author: "IT Administrator"
+  lastModified: "2025-10-31"
+  environment: "Production"
+  tags:
+    - Windows11
+    - InitialSetup
+    - Timezone
+    - Management
+
+# ==============================================================================
+# RESOURCES SECTION
+# ==============================================================================
+# Defines the DSC resources and their desired state
+resources:
+  # ----------------------------------------------------------------------------
+  # Resource 1: Windows PowerShell Adapter
+  # ----------------------------------------------------------------------------
+  # The Microsoft.Windows/WindowsPowerShell adapter enables DSC 3.0 to use
+  # classic PowerShell DSC resources (MOF-based or class-based resources that
+  # require Windows PowerShell). The ComputerManagementDsc module's TimeZone
+  # resource is a MOF-based resource, so we must use this adapter.
+  #
+  # Note: For class-based PowerShell resources that work with PowerShell Core,
+  # use Microsoft.DSC/PowerShell adapter instead.
+  # ----------------------------------------------------------------------------
+  - name: Configure System Timezone
+    type: Microsoft.Windows/WindowsPowerShell
+    properties:
+      # The 'resources' property contains an array of nested DSC resource instances
+      # that will be processed by the Windows PowerShell adapter
+      resources:
+        # ------------------------------------------------------------------------
+        # Nested Resource: TimeZone from ComputerManagementDsc
+        # ------------------------------------------------------------------------
+        # This resource manages the system timezone setting.
+        # 
+        # Resource Information:
+        #   Module: ComputerManagementDsc
+        #   Type: TimeZone (MOF-based DSC resource)
+        #   Documentation: https://github.com/dsccommunity/ComputerManagementDsc
+        #
+        # Key Properties:
+        #   - IsSingleInstance: Always "Yes" (singleton resource)
+        #   - TimeZone: The timezone ID to set
+        #
+        # To list available timezone IDs on Windows, run: tzutil /l
+        # Common US timezones:
+        #   - "Pacific Standard Time" (PST/PDT)
+        #   - "Mountain Standard Time" (MST/MDT)
+        #   - "Central Standard Time" (CST/CDT) - Chicago
+        #   - "Eastern Standard Time" (EST/EDT)
+        # ------------------------------------------------------------------------
+        - name: Set Central Standard Time
+          # Type format for PowerShell DSC resources through adapter:
+          # ModuleName/ResourceName
+          type: ComputerManagementDsc/TimeZone
+          properties:
+            # IsSingleInstance is required for singleton resources
+            # This ensures only one instance of this resource can exist
+            IsSingleInstance: "Yes"
+            
+            # TimeZone property specifies the desired timezone
+            # Using "Central Standard Time" for Chicago timezone
+            # This automatically handles daylight saving time transitions
+            TimeZone: "Central Standard Time"
+            
+# ==============================================================================
+# CONFIGURATION NOTES
+# ==============================================================================
+#
+# How This Configuration Works:
+# ------------------------------
+# 1. DSC 3.0 reads this YAML configuration document
+# 2. It identifies the Microsoft.Windows/WindowsPowerShell adapter resource
+# 3. The adapter loads the ComputerManagementDsc module in Windows PowerShell
+# 4. The TimeZone resource is invoked with the specified properties
+# 5. The resource checks current timezone and changes it if needed
+#
+# Operations:
+# -----------
+# TEST Operation (dsc config test):
+#   - Checks if current timezone matches "Central Standard Time"
+#   - Returns whether system is in desired state (true/false)
+#   - Lists any differing properties
+#   - Does NOT make any changes to the system
+#
+# SET Operation (dsc config set):
+#   - Checks current timezone
+#   - If different from desired state, changes timezone to CST
+#   - Returns before/after state and changed properties
+#   - Idempotent: safe to run multiple times
+#
+# GET Operation (dsc config get):
+#   - Retrieves and displays current timezone setting
+#   - Does NOT make any changes to the system
+#
+# Adding More Resources:
+# ----------------------
+# To expand this configuration, add additional resource blocks to the
+# 'resources' array. You can use any available DSC 3.0 resources or
+# PowerShell DSC resources through the appropriate adapter.
+#
+# Example additional resources you might add:
+#   - Computer name configuration
+#   - Windows features installation
+#   - Registry settings
+#   - File/folder creation
+#   - Service configuration
+#   - User account management
+#   - Network settings
+#   - Security policies
+#
+# For more resources, see:
+#   - Built-in DSC 3.0 resources: dsc resource list
+#   - PowerShell DSC resources: https://www.powershellgallery.com
+#
+# Best Practices:
+# ---------------
+# 1. Always test configurations with 'dsc config test' before applying
+# 2. Use descriptive names for resource instances
+# 3. Add comments to explain complex configurations
+# 4. Version your configuration documents
+# 5. Store configurations in source control (Git)
+# 6. Test in non-production environment first
+# 7. Use metadata to document changes and ownership
+#
+# Troubleshooting:
+# ----------------
+# If configuration fails:
+# 1. Verify DSC 3.0 is installed: dsc --version
+# 2. Check module is installed: Get-Module -ListAvailable ComputerManagementDsc
+# 3. Run as Administrator (required for system changes)
+# 4. Check DSC logs in output for specific error messages
+# 5. Validate YAML syntax (indentation is critical)
+# 6. Use --trace-level debug for detailed execution logs
+#
+# Example with debug logging:
+#   dsc config set --file TimeZone-Config.dsc.yaml --trace-level debug
+#
+# ==============================================================================
