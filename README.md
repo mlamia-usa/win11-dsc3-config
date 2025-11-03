@@ -27,9 +27,11 @@ This repository contains a Microsoft Desired State Configuration (DSC) 3.0 solut
 - **Privileges**: Administrator rights (script enforces this)
 
 ### Software (Auto-Installed if Missing)
-- Microsoft DSC 3.0
-- ComputerManagementDsc PowerShell module
-- WinGet (Windows Package Manager)
+- **Microsoft DSC 3.0** - Core configuration management engine
+- **PowerShell Core (pwsh)** - Modern PowerShell runtime (v7+)
+- **WinRM Service** - Configured and enabled for remote management
+- **ComputerManagementDsc Module** - PowerShell DSC resources for system configuration
+- **WinGet** - Windows Package Manager (usually pre-installed on Windows 11)
 
 ## 🚀 Quick Start
 
@@ -38,7 +40,7 @@ This repository contains a Microsoft Desired State Configuration (DSC) 3.0 solut
 Run this single command from an **elevated PowerShell** prompt:
 
 ```powershell
-irm https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/bootstrap-dsc3-configuration.ps1 | iex
+irm https://raw.githubusercontent.com/yourorg/yourrepo/main/Bootstrap-DSCConfiguration.ps1 | iex
 ```
 
 **What This Does:**
@@ -52,13 +54,13 @@ If you prefer to review the script first:
 
 ```powershell
 # Download the bootstrap script
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/bootstrap-dsc3-onfiguration.ps1" -OutFile ".\bootstrap-dsc3-onfiguration.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/yourorg/yourrepo/main/Bootstrap-DSCConfiguration.ps1" -OutFile ".\Bootstrap-DSCConfiguration.ps1"
 
 # Review the script (optional but recommended)
-Get-Content .\bootstrap-dsc3-onfiguration.ps1
+Get-Content .\Bootstrap-DSCConfiguration.ps1
 
 # Run the script
-.\bootstrap-dsc3-onfiguration.ps1
+.\Bootstrap-DSCConfiguration.ps1
 ```
 
 ### Option 3: Test Before Applying
@@ -66,7 +68,7 @@ Get-Content .\bootstrap-dsc3-onfiguration.ps1
 To check what would change **without making changes**:
 
 ```powershell
-.\bootstrap-dsc3-onfiguration.ps1 -Operation Test
+.\Bootstrap-DSCConfiguration.ps1 -Operation Test
 ```
 
 ## 📖 Detailed Usage
@@ -74,11 +76,11 @@ To check what would change **without making changes**:
 ### Bootstrap Script Parameters
 
 ```powershell
-.\bootstrap-dsc3-onfiguration.ps1 [Parameters]
+.\Bootstrap-DSCConfiguration.ps1 [Parameters]
 
 -ConfigurationUrl <string>
     URL to the DSC configuration YAML file
-    Default: https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/timezone-config.dsc.yaml
+    Default: https://raw.githubusercontent.com/yourorg/yourrepo/main/TimeZone-Config.dsc.yaml
 
 -Operation <string>
     DSC operation to perform: Test, Set, or Get
@@ -96,35 +98,35 @@ To check what would change **without making changes**:
 
 **Test configuration without making changes:**
 ```powershell
-.\bootstrap-dsc3-onfiguration.ps1 -Operation Test
+.\Bootstrap-DSCConfiguration.ps1 -Operation Test
 ```
 
 **Apply configuration (default):**
 ```powershell
-.\bootstrap-dsc3-onfiguration.ps1 -Operation Set
+.\Bootstrap-DSCConfiguration.ps1 -Operation Set
 ```
 
 **Get current system state:**
 ```powershell
-.\bootstrap-dsc3-onfiguration.ps1 -Operation Get
+.\Bootstrap-DSCConfiguration.ps1 -Operation Get
 ```
 
 **Use custom configuration file:**
 ```powershell
-.\bootstrap-dsc3-onfiguration.ps1 -ConfigurationUrl "https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/custom-config.dsc.yaml"
+.\Bootstrap-DSCConfiguration.ps1 -ConfigurationUrl "https://raw.githubusercontent.com/yourorg/yourrepo/main/custom-config.dsc.yaml"
 ```
 
 **Custom log location:**
 ```powershell
-.\bootstrap-dsc3-onfiguration.ps1 -LogPath "C:\Logs\DSC-Config.log"
+.\Bootstrap-DSCConfiguration.ps1 -LogPath "C:\Logs\DSC-Config.log"
 ```
 
 ## 📁 Repository Structure
 
 ```
 .
-├── bootstrap-dsc3-onfiguration.ps1   # Main bootstrap script
-├── timezone-config.dsc.yaml         # DSC configuration document
+├── Bootstrap-DSCConfiguration.ps1   # Main bootstrap script
+├── TimeZone-Config.dsc.yaml         # DSC configuration document
 └── README.md                        # This file
 ```
 
@@ -137,19 +139,28 @@ graph TD
     A[Start] --> B[Check Admin Rights]
     B --> C{Is Admin?}
     C -->|No| D[Error: Elevation Required]
-    C -->|Yes| E[Check DSC 3.0]
-    E --> F{DSC Installed?}
-    F -->|No| G[Install DSC via WinGet]
-    F -->|Yes| H[Check PowerShell Modules]
+    C -->|Yes| E[Check PowerShell Core]
+    E --> F{pwsh Installed?}
+    F -->|No| G[Install PowerShell Core via WinGet]
+    F -->|Yes| H[Check DSC 3.0]
     G --> H
-    H --> I{Modules Installed?}
-    I -->|No| J[Install ComputerManagementDsc]
-    I -->|Yes| K[Download Configuration]
+    H --> I{DSC Installed?}
+    I -->|No| J[Install DSC 3.0 via WinGet]
+    I -->|Yes| K[Configure WinRM]
     J --> K
-    K --> L[Execute DSC Operation]
-    L --> M[Display Results]
-    M --> N[Cleanup Temp Files]
-    N --> O[Complete]
+    K --> L[Enable PSRemoting]
+    L --> M[Configure Trusted Hosts]
+    M --> N[Test WinRM Connectivity]
+    N --> O[Check PowerShell Modules]
+    O --> P{Modules Installed?}
+    P -->|No| Q[Install ComputerManagementDsc]
+    P -->|Yes| R[Download Configuration]
+    Q --> R
+    R --> S[Execute DSC Operation]
+    S --> T[Display Results]
+    T --> U[Cleanup Temp Files]
+    U --> V[Show System Summary]
+    V --> W[Complete]
 ```
 
 ### DSC Configuration Document
@@ -165,15 +176,19 @@ The configuration uses:
 ### Successful Execution
 
 ```
-[2025-10-31 10:30:00] [Info] ================================================================================
-[2025-10-31 10:30:00] [Info] DSC 3.0 Bootstrap Script Started
-[2025-10-31 10:30:00] [Info] ================================================================================
-[2025-10-31 10:30:01] [Success] Administrator privileges confirmed
-[2025-10-31 10:30:02] [Success] DSC 3.0 is installed. Version: 3.0.0
-[2025-10-31 10:30:03] [Success] ComputerManagementDsc module is already installed
-[2025-10-31 10:30:05] [Success] Configuration document downloaded successfully
-[2025-10-31 10:30:15] [Success] DSC operation completed successfully!
-[2025-10-31 10:30:15] [Success] All operations completed successfully!
+[2025-11-03 10:30:00] [Info] ================================================================================
+[2025-11-03 10:30:00] [Info] DSC 3.0 Bootstrap Script Started
+[2025-11-03 10:30:00] [Info] ================================================================================
+[2025-11-03 10:30:01] [Success] Administrator privileges confirmed
+[2025-11-03 10:30:02] [Success] PowerShell Core is already installed: C:\Program Files\PowerShell\7\pwsh.exe
+[2025-11-03 10:30:02] [Success] PowerShell Core Version: 7.4.0
+[2025-11-03 10:30:03] [Success] DSC 3.0 is installed. Version: 3.0.0
+[2025-11-03 10:30:04] [Info] WinRM service found. Current status: Running
+[2025-11-03 10:30:05] [Success] WinRM connectivity test SUCCESSFUL
+[2025-11-03 10:30:06] [Success] ComputerManagementDsc module is already installed
+[2025-11-03 10:30:08] [Success] Configuration document downloaded successfully
+[2025-11-03 10:30:18] [Success] DSC operation completed successfully!
+[2025-11-03 10:30:18] [Success] All operations completed successfully!
 ```
 
 ### Test Operation Output
@@ -197,7 +212,7 @@ Status: In desired state
 
 ## 📝 Configuration File Details
 
-### timezone-config.dsc.yaml
+### TimeZone-Config.dsc.yaml
 
 The configuration document is extensively commented and includes:
 
@@ -215,7 +230,7 @@ Common US timezones (run `tzutil /l` on Windows for full list):
 - `Central Standard Time` - US Central Region (Chicago)
 - `Eastern Standard Time` - US East Coast
 
-To change the timezone, edit the `TimeZone` property in `timezone-config.dsc.yaml`:
+To change the timezone, edit the `TimeZone` property in `TimeZone-Config.dsc.yaml`:
 
 ```yaml
 properties:
@@ -236,19 +251,26 @@ properties:
 **Solution**: Install Windows App Installer from Microsoft Store
 - Or download manually from: https://aka.ms/getwinget
 
-#### 3. "Failed to download configuration document"
+#### 3. "PowerShell Core (pwsh) command not found after installation"
+**Solution**: 
+- Close and reopen your PowerShell window (to refresh PATH)
+- Or manually download from: https://aka.ms/powershell-release
+- Verify installation: Run `pwsh --version` in a new terminal
+
+#### 4. "Failed to download configuration document"
 **Solution**: 
 - Verify the URL is correct
 - Check internet connectivity
 - Ensure GitHub is accessible from your network
 
-#### 4. "DSC operation failed"
+#### 6. "DSC operation failed"
 **Solution**: 
 - Review the detailed error in the log file
 - Run with debug logging: add `--trace-level debug` to DSC command
 - Verify ComputerManagementDsc module is installed: `Get-Module -ListAvailable ComputerManagementDsc`
+- Check that PowerShell Core is working: `pwsh -Command "Get-TimeZone"`
 
-#### 5. Configuration not applying
+#### 7. Configuration not applying
 **Solution**:
 - Verify you're running in an elevated PowerShell session
 - Check the log file at `C:\Windows\Temp\DSC-Bootstrap.log`
@@ -275,7 +297,7 @@ Get-Content C:\Windows\Temp\DSC-Bootstrap.log
 
 ### Adding More Resources
 
-To add additional configuration tasks, edit `timezone-config.dsc.yaml` and add resources to the `resources` array:
+To add additional configuration tasks, edit `TimeZone-Config.dsc.yaml` and add resources to the `resources` array:
 
 ```yaml
 resources:
@@ -358,6 +380,8 @@ Before deploying to production:
 - [ ] Verify log output shows successful execution
 - [ ] Confirm timezone change takes effect
 - [ ] Test idempotency (run multiple times, should succeed each time)
+- [ ] Verify PowerShell Core is installed: `pwsh --version`
+- [ ] Verify WinRM is configured: `Test-WSMan -ComputerName localhost`
 - [ ] Review and update the ConfigurationUrl in the bootstrap script
 - [ ] Document any customizations made
 - [ ] Update version numbers in metadata
@@ -365,10 +389,14 @@ Before deploying to production:
 ## 🔐 Security Considerations
 
 - **Administrator Rights**: Required for system configuration changes
-- **Script Execution**: Consider signing scripts in production
-- **Code Review**: Always review scripts before execution
+- **PowerShell Execution Policy**: May need to be adjusted for script execution
+- **Script Execution**: Consider signing scripts in production environments
+- **Code Review**: Always review scripts before execution, especially from remote sources
 - **Network Security**: Ensure GitHub access is allowed in your firewall
+- **WinRM Configuration**: Opens remote management capabilities - review security implications
+- **Trusted Hosts**: Configured for localhost only by default
 - **Logging**: Review logs for sensitive information before sharing
+- **Module Sources**: Only installs modules from trusted PSGallery
 
 ## 📞 Support
 
@@ -380,6 +408,35 @@ For issues or questions:
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: 2025-10-31  
+**Version**: 1.2.0  
+**Last Updated**: 2025-11-03  
 **Maintained By**: IT Administrator
+
+## 📝 Version History
+
+### Version 1.2.0 (2025-11-03) - Current
+- **ADDED**: PowerShell Core (pwsh) installation as standard prerequisite
+- **ENHANCED**: Complete WinRM configuration including PSRemoting enablement
+- **IMPROVED**: Trusted hosts configuration for localhost operations
+- **ADDED**: WinRM connectivity testing after configuration
+- **ENHANCED**: Better logging and status reporting for all prerequisites
+- **ADDED**: System information summary at completion
+- **IMPROVED**: More robust error handling and recovery
+
+### Version 1.1.0 (2025-11-03)
+- **ADDED**: PowerShell Core (pwsh) installation as standard prerequisite
+- **ENHANCED**: Complete WinRM configuration including PSRemoting enablement
+- **IMPROVED**: Trusted hosts configuration for localhost operations
+- **ADDED**: WinRM connectivity testing after configuration
+- **ENHANCED**: Better logging and status reporting for all prerequisites
+- **ADDED**: System information summary at completion
+
+### Version 1.1.0 (2025-11-03)
+- **FIXED**: Resolved WinRM connectivity issues with WindowsPowerShell adapter
+- **CHANGED**: Switched to Microsoft.DSC/PowerShell adapter with Script resource
+- **ADDED**: WinRM configuration step in bootstrap script
+- **IMPROVED**: More reliable timezone configuration without WinRM dependency
+- **ENHANCED**: Better error handling and verbose logging
+
+### Version 1.0.0 (2025-10-31)
+- Initial release with basic timezone configuration

@@ -9,9 +9,11 @@
     
     The script performs the following tasks:
     1. Validates that DSC 3.0 is installed (installs if missing)
-    2. Downloads the DSC configuration document from GitHub
-    3. Executes the configuration to set the system to the desired state
-    4. Provides detailed logging and progress feedback
+    2. Installs PowerShell Core (pwsh) if not present
+    3. Configures WinRM (required for PowerShell DSC resources)
+    4. Downloads the DSC configuration document from GitHub
+    5. Executes the configuration to set the system to the desired state
+    6. Provides detailed logging and progress feedback
 
 .PARAMETER ConfigurationUrl
     The URL to the DSC configuration YAML file in your GitHub repository.
@@ -30,19 +32,19 @@
 
 .EXAMPLE
     # Run directly from GitHub (using Invoke-Expression)
-    irm https://raw.githubusercontent.com/yourorg/yourrepo/main/bootstrap-dsc3-onfiguration.ps1 | iex
+    irm https://raw.githubusercontent.com/yourorg/yourrepo/main/Bootstrap-DSCConfiguration.ps1 | iex
 
 .EXAMPLE
     # Run with custom configuration URL
-    .\bootstrap-dsc3-onfiguration.ps1 -ConfigurationUrl "https://raw.githubusercontent.com/yourorg/yourrepo/main/custom-config.dsc.yaml"
+    .\Bootstrap-DSCConfiguration.ps1 -ConfigurationUrl "https://raw.githubusercontent.com/yourorg/yourrepo/main/custom-config.dsc.yaml"
 
 .EXAMPLE
     # Test configuration without making changes
-    .\bootstrap-dsc3-onfiguration.ps1 -Operation Test
+    .\Bootstrap-DSCConfiguration.ps1 -Operation Test
 
 .NOTES
     Author: IT Administrator
-    Version: 1.0.0
+    Version: 1.2.0
     Requires: Windows 11, PowerShell 5.1 or later, Administrator privileges
     
     This script requires administrator privileges to install DSC and modify system settings.
@@ -51,7 +53,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [string]$ConfigurationUrl = "https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/timezone-config.dsc.yaml",
+    [string]$ConfigurationUrl = "https://raw.githubusercontent.com/yourorg/yourrepo/main/timezone-config.dsc.yaml",
     
     [Parameter(Mandatory = $false)]
     [ValidateSet("Test", "Set", "Get")]
@@ -123,7 +125,7 @@ function Write-SectionHeader {
 
 try {
     Write-SectionHeader -Title "DSC 3.0 Bootstrap Script Started"
-    Write-Log -Message "Script Version: 1.0.0" -Level Info
+    Write-Log -Message "Script Version: 1.2.0" -Level Info
     Write-Log -Message "Configuration URL: $ConfigurationUrl" -Level Info
     Write-Log -Message "Operation: $Operation" -Level Info
     Write-Log -Message "Log Path: $LogPath" -Level Info
@@ -145,16 +147,83 @@ try {
     Write-Log -Message "Administrator privileges confirmed" -Level Success
     
     # ========================================================================
-    # STEP 2: Check DSC 3.0 Installation
+    # STEP 2: Check and Install PowerShell Core (pwsh)
     # ========================================================================
-    Write-SectionHeader -Title "STEP 2: Checking DSC 3.0 Installation"
+    Write-SectionHeader -Title "STEP 2: Checking PowerShell Core Installation"
+    
+    Write-Log -Message "PowerShell Core (pwsh) is required for DSC 3.0 compatibility" -Level Info
+    
+    $pwshCommand = Get-Command -Name "pwsh" -ErrorAction SilentlyContinue
+    
+    if ($null -eq $pwshCommand) {
+        Write-Log -Message "PowerShell Core not found. Attempting to install via WinGet..." -Level Warning
+        
+        # Check if WinGet is available
+        $wingetCommand = Get-Command -Name "winget" -ErrorAction SilentlyContinue
+        
+        if ($null -eq $wingetCommand) {
+            Write-Log -Message "ERROR: WinGet is not available on this system!" -Level Error
+            Write-Log -Message "Please install WinGet from: https://aka.ms/getwinget" -Level Error
+            Write-Log -Message "Or manually install PowerShell from: https://aka.ms/powershell-release" -Level Error
+            throw "WinGet not available"
+        }
+        
+        Write-Log -Message "Installing PowerShell Core from Microsoft Store..." -Level Info
+        
+        # Install PowerShell using WinGet
+        # Using the Microsoft.PowerShell package ID
+        $installResult = winget install --id Microsoft.PowerShell --source winget --accept-package-agreements --accept-source-agreements 2>&1
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log -Message "WARNING: WinGet install may have encountered issues (exit code: $LASTEXITCODE)" -Level Warning
+            Write-Log -Message "Install output: $($installResult -join "`n")" -Level Warning
+            Write-Log -Message "Checking if PowerShell Core was installed anyway..." -Level Info
+        } else {
+            Write-Log -Message "PowerShell Core installation completed" -Level Success
+        }
+        
+        Write-Log -Message "Refreshing environment variables..." -Level Info
+        
+        # Refresh PATH environment variable
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + 
+                    [System.Environment]::GetEnvironmentVariable("Path", "User")
+        
+        # Verify installation
+        $pwshCommand = Get-Command -Name "pwsh" -ErrorAction SilentlyContinue
+        
+        if ($null -eq $pwshCommand) {
+            Write-Log -Message "ERROR: PowerShell Core (pwsh) command not found after installation!" -Level Error
+            Write-Log -Message "You may need to:" -Level Error
+            Write-Log -Message "  1. Restart your PowerShell session" -Level Error
+            Write-Log -Message "  2. Manually install from: https://aka.ms/powershell-release" -Level Error
+            Write-Log -Message "  3. Ensure 'pwsh' is in your PATH" -Level Error
+            throw "PowerShell Core command not available after installation"
+        }
+        
+        Write-Log -Message "PowerShell Core is now available" -Level Success
+    } else {
+        Write-Log -Message "PowerShell Core is already installed: $($pwshCommand.Source)" -Level Success
+    }
+    
+    # Get and display PowerShell Core version
+    try {
+        $pwshVersion = & pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()' 2>&1
+        Write-Log -Message "PowerShell Core Version: $pwshVersion" -Level Success
+    } catch {
+        Write-Log -Message "Could not determine PowerShell Core version" -Level Warning
+    }
+    
+    # ========================================================================
+    # STEP 3: Check DSC 3.0 Installation
+    # ========================================================================
+    Write-SectionHeader -Title "STEP 3: Checking DSC 3.0 Installation"
     
     $dscCommand = Get-Command -Name "dsc" -ErrorAction SilentlyContinue
     
     if ($null -eq $dscCommand) {
         Write-Log -Message "DSC 3.0 not found. Attempting to install via WinGet..." -Level Warning
         
-        # Check if WinGet is available
+        # Check if WinGet is available (should be, we verified it in Step 2)
         $wingetCommand = Get-Command -Name "winget" -ErrorAction SilentlyContinue
         
         if ($null -eq $wingetCommand) {
@@ -170,7 +239,7 @@ try {
         
         if ($LASTEXITCODE -ne 0) {
             Write-Log -Message "ERROR: Failed to install DSC 3.0!" -Level Error
-            Write-Log -Message "Install output: $installResult" -Level Error
+            Write-Log -Message "Install output: $($installResult -join "`n")" -Level Error
             throw "DSC installation failed"
         }
         
@@ -196,9 +265,123 @@ try {
     Write-Log -Message "DSC 3.0 is installed. Version: $dscVersion" -Level Success
     
     # ========================================================================
-    # STEP 3: Install Required PowerShell Modules
+    # STEP 4: Configure WinRM Service
     # ========================================================================
-    Write-SectionHeader -Title "STEP 3: Checking Required PowerShell Modules"
+    Write-SectionHeader -Title "STEP 4: Configuring WinRM Service"
+    
+    Write-Log -Message "WinRM is required for PowerShell DSC resources and remote management" -Level Info
+    
+    # Check if WinRM service exists and its status
+    $winrmService = Get-Service -Name WinRM -ErrorAction SilentlyContinue
+    
+    if ($null -eq $winrmService) {
+        Write-Log -Message "ERROR: WinRM service not found on this system!" -Level Error
+        throw "WinRM service not available"
+    }
+    
+    Write-Log -Message "WinRM service found. Current status: $($winrmService.Status)" -Level Info
+    Write-Log -Message "WinRM service startup type: $($winrmService.StartType)" -Level Info
+    
+    # Configure WinRM
+    try {
+        Write-Log -Message "Running 'winrm quickconfig' to configure WinRM..." -Level Info
+        
+        # Run winrm quickconfig with automatic yes to prompts
+        $quickConfigOutput = & cmd /c "winrm quickconfig -force 2>&1"
+        
+        Write-Log -Message "WinRM configuration output:" -Level Info
+        foreach ($line in $quickConfigOutput) {
+            Write-Log -Message "  $line" -Level Info
+        }
+        
+        # Ensure WinRM service is running
+        $winrmService = Get-Service -Name WinRM
+        if ($winrmService.Status -ne "Running") {
+            Write-Log -Message "Starting WinRM service..." -Level Info
+            Start-Service -Name WinRM -ErrorAction Stop
+            Start-Sleep -Seconds 2
+            $winrmService = Get-Service -Name WinRM
+            Write-Log -Message "WinRM service started successfully. Status: $($winrmService.Status)" -Level Success
+        } else {
+            Write-Log -Message "WinRM service is already running" -Level Success
+        }
+        
+        # Set WinRM service to automatic startup
+        $startupType = (Get-Service -Name WinRM).StartType
+        if ($startupType -ne "Automatic") {
+            Write-Log -Message "Setting WinRM service to automatic startup..." -Level Info
+            Set-Service -Name WinRM -StartupType Automatic
+            Write-Log -Message "WinRM startup type set to Automatic" -Level Success
+        } else {
+            Write-Log -Message "WinRM service is already set to automatic startup" -Level Success
+        }
+        
+        # Configure WinRM for localhost
+        Write-Log -Message "Configuring WinRM trusted hosts..." -Level Info
+        
+        try {
+            # Get current trusted hosts
+            $currentTrustedHosts = (Get-Item WSMan:\localhost\Client\TrustedHosts -ErrorAction SilentlyContinue).Value
+            
+            Write-Log -Message "Current trusted hosts: $currentTrustedHosts" -Level Info
+            
+            # Always ensure localhost is in trusted hosts
+            if ([string]::IsNullOrWhiteSpace($currentTrustedHosts)) {
+                Write-Log -Message "Setting trusted hosts to 'localhost'..." -Level Info
+                Set-Item WSMan:\localhost\Client\TrustedHosts -Value "localhost" -Force
+                Write-Log -Message "Trusted hosts set to 'localhost'" -Level Success
+            } elseif ($currentTrustedHosts -notmatch "localhost") {
+                Write-Log -Message "Adding 'localhost' to trusted hosts..." -Level Info
+                $newTrustedHosts = "$currentTrustedHosts,localhost"
+                Set-Item WSMan:\localhost\Client\TrustedHosts -Value $newTrustedHosts -Force
+                Write-Log -Message "Added 'localhost' to trusted hosts" -Level Success
+            } else {
+                Write-Log -Message "'localhost' is already in trusted hosts" -Level Success
+            }
+            
+            # Display final trusted hosts configuration
+            $finalTrustedHosts = (Get-Item WSMan:\localhost\Client\TrustedHosts).Value
+            Write-Log -Message "Final trusted hosts configuration: $finalTrustedHosts" -Level Info
+            
+        } catch {
+            Write-Log -Message "WARNING: Could not configure trusted hosts: $($_.Exception.Message)" -Level Warning
+            Write-Log -Message "WinRM may still work for local operations" -Level Warning
+        }
+        
+        # Enable PSRemoting (this also configures WinRM properly)
+        Write-Log -Message "Enabling PSRemoting..." -Level Info
+        try {
+            Enable-PSRemoting -Force -SkipNetworkProfileCheck -ErrorAction Stop | Out-Null
+            Write-Log -Message "PSRemoting enabled successfully" -Level Success
+        } catch {
+            Write-Log -Message "WARNING: Error enabling PSRemoting: $($_.Exception.Message)" -Level Warning
+            Write-Log -Message "Continuing anyway as WinRM service is running..." -Level Warning
+        }
+        
+        # Test WinRM connectivity
+        Write-Log -Message "Testing WinRM connectivity to localhost..." -Level Info
+        try {
+            $testResult = Test-WSMan -ComputerName localhost -ErrorAction Stop
+            Write-Log -Message "WinRM connectivity test SUCCESSFUL" -Level Success
+            Write-Log -Message "  Protocol Version: $($testResult.ProductVersion)" -Level Info
+            Write-Log -Message "  Product Vendor: $($testResult.ProductVendor)" -Level Info
+        } catch {
+            Write-Log -Message "WARNING: WinRM connectivity test failed: $($_.Exception.Message)" -Level Warning
+            Write-Log -Message "DSC may still work, but some features might be limited" -Level Warning
+        }
+        
+        Write-Log -Message "WinRM configuration completed" -Level Success
+        
+    } catch {
+        Write-Log -Message "WARNING: Error during WinRM configuration: $($_.Exception.Message)" -Level Warning
+        Write-Log -Message "Some DSC features may not work properly without WinRM" -Level Warning
+        Write-Log -Message "Attempting to continue anyway..." -Level Warning
+    }
+    
+    # ========================================================================
+    # STEP 5: Install Required PowerShell Modules
+    # ========================================================================
+    Write-SectionHeader -Title "STEP 5: Checking Required PowerShell Modules"
     
     Write-Log -Message "Checking for ComputerManagementDsc module..." -Level Info
     
@@ -212,28 +395,49 @@ try {
         if ($null -eq $nugetProvider) {
             Write-Log -Message "Installing NuGet package provider..." -Level Info
             Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope AllUsers | Out-Null
+            Write-Log -Message "NuGet package provider installed" -Level Success
+        } else {
+            Write-Log -Message "NuGet package provider is already installed" -Level Success
         }
         
         # Set PSGallery as trusted
         $psGallery = Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
-        if ($psGallery.InstallationPolicy -ne "Trusted") {
+        if ($null -ne $psGallery -and $psGallery.InstallationPolicy -ne "Trusted") {
             Write-Log -Message "Setting PSGallery as trusted repository..." -Level Info
             Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+            Write-Log -Message "PSGallery set as trusted" -Level Success
+        } else {
+            Write-Log -Message "PSGallery is already trusted" -Level Success
         }
         
         # Install the module
         Write-Log -Message "Installing ComputerManagementDsc module from PowerShell Gallery..." -Level Info
-        Install-Module -Name ComputerManagementDsc -Scope AllUsers -Force -AllowClobber
-        
-        Write-Log -Message "ComputerManagementDsc module installed successfully" -Level Success
+        try {
+            Install-Module -Name ComputerManagementDsc -Scope AllUsers -Force -AllowClobber -ErrorAction Stop
+            Write-Log -Message "ComputerManagementDsc module installed successfully" -Level Success
+        } catch {
+            Write-Log -Message "ERROR: Failed to install ComputerManagementDsc module" -Level Error
+            Write-Log -Message "Error: $($_.Exception.Message)" -Level Error
+            throw
+        }
     } else {
         Write-Log -Message "ComputerManagementDsc module is already installed (Version: $($module.Version))" -Level Success
     }
     
+    # Import the module to ensure it's available
+    Write-Log -Message "Importing ComputerManagementDsc module..." -Level Info
+    try {
+        Import-Module ComputerManagementDsc -Force -ErrorAction Stop
+        Write-Log -Message "Module imported successfully" -Level Success
+    } catch {
+        Write-Log -Message "WARNING: Could not import module: $($_.Exception.Message)" -Level Warning
+        Write-Log -Message "Module may still work when called by DSC" -Level Warning
+    }
+    
     # ========================================================================
-    # STEP 4: Download Configuration Document
+    # STEP 6: Download Configuration Document
     # ========================================================================
-    Write-SectionHeader -Title "STEP 4: Downloading DSC Configuration Document"
+    Write-SectionHeader -Title "STEP 6: Downloading DSC Configuration Document"
     
     $tempConfigPath = Join-Path -Path $env:TEMP -ChildPath "dsc-config-$(Get-Date -Format 'yyyyMMdd-HHmmss').yaml"
     
@@ -259,15 +463,15 @@ try {
     }
     
     # ========================================================================
-    # STEP 5: Execute DSC Configuration
+    # STEP 7: Execute DSC Configuration
     # ========================================================================
-    Write-SectionHeader -Title "STEP 5: Executing DSC Configuration ($Operation)"
+    Write-SectionHeader -Title "STEP 7: Executing DSC Configuration ($Operation)"
     
     Write-Log -Message "Preparing to execute DSC $Operation operation..." -Level Info
     
     # Build the DSC command
     $dscOperation = $Operation.ToLower()
-    $dscCommand = "dsc config $dscOperation --file `"$tempConfigPath`" --output-format pretty-json"
+    $dscCommand = "dsc config $dscOperation --file `"$tempConfigPath`""
     
     Write-Log -Message "Executing command: $dscCommand" -Level Info
     
@@ -277,23 +481,27 @@ try {
     
     try {
         # Execute and capture output
-        $dscOutput = & cmd /c "dsc config $dscOperation --file `"$tempConfigPath`" --output-format pretty-json 2>&1"
+        $dscOutput = & cmd /c "dsc config $dscOperation --file `"$tempConfigPath`" 2>&1"
         $exitCode = $LASTEXITCODE
         
         $endTime = Get-Date
         $duration = $endTime - $startTime
         
         Write-Log -Message "Operation completed in: $($duration.TotalSeconds) seconds" -Level Info
+        Write-Log -Message "Exit Code: $exitCode" -Level Info
         
-        # Parse and display results
+        # Display raw output
+        Write-Log -Message "Raw Output:" -Level Info
+        Write-Log -Message ($dscOutput -join "`n") -Level Info
+        
+        # Parse results based on exit code
         if ($exitCode -eq 0) {
             Write-Log -Message "DSC operation completed successfully!" -Level Success
-            Write-Log -Message "Raw Output:" -Level Info
-            Write-Log -Message ($dscOutput -join "`n") -Level Info
             
             # Try to parse JSON output for better reporting
             try {
-                $result = $dscOutput -join "`n" | ConvertFrom-Json
+                $jsonOutput = $dscOutput -join "`n"
+                $result = $jsonOutput | ConvertFrom-Json
                 
                 Write-SectionHeader -Title "OPERATION RESULTS"
                 
@@ -326,14 +534,20 @@ try {
                                     }
                                 }
                                 "Set" {
-                                    Write-Log -Message "Before State: $($resourceResult.result.beforeState | ConvertTo-Json -Compress)" -Level Info
-                                    Write-Log -Message "After State: $($resourceResult.result.afterState | ConvertTo-Json -Compress)" -Level Info
+                                    if ($resourceResult.result.beforeState) {
+                                        Write-Log -Message "Before State: $($resourceResult.result.beforeState | ConvertTo-Json -Compress)" -Level Info
+                                    }
+                                    if ($resourceResult.result.afterState) {
+                                        Write-Log -Message "After State: $($resourceResult.result.afterState | ConvertTo-Json -Compress)" -Level Info
+                                    }
                                     if ($resourceResult.result.changedProperties) {
                                         Write-Log -Message "Changed Properties: $($resourceResult.result.changedProperties -join ', ')" -Level Success
                                     }
                                 }
                                 "Get" {
-                                    Write-Log -Message "Actual State: $($resourceResult.result.actualState | ConvertTo-Json -Compress)" -Level Info
+                                    if ($resourceResult.result.actualState) {
+                                        Write-Log -Message "Actual State: $($resourceResult.result.actualState | ConvertTo-Json -Compress)" -Level Info
+                                    }
                                 }
                             }
                         }
@@ -349,13 +563,13 @@ try {
                 }
                 
             } catch {
-                Write-Log -Message "Could not parse JSON output (this may be normal for some outputs)" -Level Warning
+                Write-Log -Message "Could not parse JSON output (output may not be in JSON format)" -Level Warning
             }
             
         } else {
             Write-Log -Message "ERROR: DSC operation failed with exit code: $exitCode" -Level Error
-            Write-Log -Message "Output: $($dscOutput -join "`n")" -Level Error
-            throw "DSC operation failed"
+            Write-Log -Message "This may indicate a configuration error or missing prerequisites" -Level Error
+            throw "DSC operation failed with exit code $exitCode"
         }
         
     } catch {
@@ -365,9 +579,9 @@ try {
     }
     
     # ========================================================================
-    # STEP 6: Cleanup
+    # STEP 8: Cleanup
     # ========================================================================
-    Write-SectionHeader -Title "STEP 6: Cleanup"
+    Write-SectionHeader -Title "STEP 8: Cleanup"
     
     Write-Log -Message "Removing temporary configuration file..." -Level Info
     Remove-Item -Path $tempConfigPath -Force -ErrorAction SilentlyContinue
@@ -383,6 +597,36 @@ try {
     
     if ($Operation -eq "Test") {
         Write-Log -Message "`nTIP: Run with -Operation Set to apply the configuration" -Level Info
+    }
+    
+    # Display current system information
+    Write-Log -Message "`nCurrent System Information:" -Level Info
+    
+    # Timezone
+    $currentTZ = Get-TimeZone
+    Write-Log -Message "  Timezone:" -Level Info
+    Write-Log -Message "    ID: $($currentTZ.Id)" -Level Info
+    Write-Log -Message "    Display Name: $($currentTZ.DisplayName)" -Level Info
+    Write-Log -Message "    Standard Name: $($currentTZ.StandardName)" -Level Info
+    
+    # PowerShell versions
+    Write-Log -Message "  PowerShell:" -Level Info
+    Write-Log -Message "    Windows PowerShell: $($PSVersionTable.PSVersion)" -Level Info
+    if ($pwshCommand) {
+        try {
+            $pwshVer = & pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()' 2>&1
+            Write-Log -Message "    PowerShell Core: $pwshVer" -Level Info
+        } catch {
+            Write-Log -Message "    PowerShell Core: Installed but version check failed" -Level Info
+        }
+    }
+    
+    # WinRM status
+    $winrmSvc = Get-Service -Name WinRM -ErrorAction SilentlyContinue
+    if ($winrmSvc) {
+        Write-Log -Message "  WinRM Service:" -Level Info
+        Write-Log -Message "    Status: $($winrmSvc.Status)" -Level Info
+        Write-Log -Message "    Startup Type: $($winrmSvc.StartType)" -Level Info
     }
     
     exit 0
