@@ -35,6 +35,9 @@ This repository contains a Microsoft Desired State Configuration (DSC) 3.0 solut
 
 ## 🚀 Quick Start
 
+VERY IMPORTANT FOR TROUBLESHOOTING: ALL FILE NAMES IN THE REPO MUST BE LOWER CASE, OR YOU WILL GET 404: NOT FOUND ERRORS.
+As soon as I went with lower-case for all project file names, I stopped seeing those 404 issues.
+
 ### Option 1: One-Line Bootstrap (Recommended)
 
 Run this single command from an **elevated PowerShell** prompt:
