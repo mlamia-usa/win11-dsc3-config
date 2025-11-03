@@ -43,7 +43,7 @@ This repository contains a Microsoft Desired State Configuration (DSC) 3.0 solut
 Run this single command from an **elevated PowerShell** prompt:
 
 ```powershell
-irm https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/bootstrap-dsc3-onfiguration.ps1 | iex
+irm https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/bootstrap-dsc3-configuration.ps1 | iex
 ```
 
 **What This Does:**
