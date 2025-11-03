@@ -43,7 +43,7 @@ This repository contains a Microsoft Desired State Configuration (DSC) 3.0 solut
 Run this single command from an **elevated PowerShell** prompt:
 
 ```powershell
-irm https://raw.githubusercontent.com/yourorg/yourrepo/main/bootstrap-dsc3-onfiguration.ps1 | iex
+irm https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/bootstrap-dsc3-onfiguration.ps1 | iex
 ```
 
 **What This Does:**
@@ -57,7 +57,7 @@ If you prefer to review the script first:
 
 ```powershell
 # Download the bootstrap script
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/yourorg/yourrepo/main/bootstrap-dsc3-onfiguration.ps1" -OutFile ".\bootstrap-dsc3-onfiguration.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/bootstrap-dsc3-onfiguration.ps1" -OutFile ".\bootstrap-dsc3-onfiguration.ps1"
 
 # Review the script (optional but recommended)
 Get-Content .\bootstrap-dsc3-onfiguration.ps1
@@ -83,7 +83,7 @@ To check what would change **without making changes**:
 
 -ConfigurationUrl <string>
     URL to the DSC configuration YAML file
-    Default: https://raw.githubusercontent.com/yourorg/yourrepo/main/timezone-config.dsc.yaml
+    Default: https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/timezone-config.dsc.yaml
 
 -Operation <string>
     DSC operation to perform: Test, Set, or Get
@@ -116,7 +116,7 @@ To check what would change **without making changes**:
 
 **Use custom configuration file:**
 ```powershell
-.\bootstrap-dsc3-onfiguration.ps1 -ConfigurationUrl "https://raw.githubusercontent.com/yourorg/yourrepo/main/custom-config.dsc.yaml"
+.\bootstrap-dsc3-onfiguration.ps1 -ConfigurationUrl "https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/custom-config.dsc.yaml"
 ```
 
 **Custom log location:**

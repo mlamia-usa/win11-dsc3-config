@@ -131,6 +131,18 @@ try {
     Write-Log -Message "Log Path: $LogPath" -Level Info
     
     # ========================================================================
+    # INITIAL SETUP: Configure TLS and Security Protocols
+    # ========================================================================
+    Write-Log -Message "Configuring security protocols for PowerShell Gallery access..." -Level Info
+    try {
+        # Enable TLS 1.2 (required for PowerShell Gallery)
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        Write-Log -Message "TLS 1.2 enabled for secure connections" -Level Success
+    } catch {
+        Write-Log -Message "WARNING: Could not configure TLS settings: $($_.Exception.Message)" -Level Warning
+    }
+    
+    # ========================================================================
     # STEP 1: Validate Administrator Privileges
     # ========================================================================
     Write-SectionHeader -Title "STEP 1: Validating Administrator Privileges"
@@ -390,39 +402,104 @@ try {
     if ($null -eq $module) {
         Write-Log -Message "ComputerManagementDsc module not found. Installing..." -Level Warning
         
-        # Install NuGet provider if needed
-        $nugetProvider = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
-        if ($null -eq $nugetProvider) {
-            Write-Log -Message "Installing NuGet package provider..." -Level Info
-            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope AllUsers | Out-Null
-            Write-Log -Message "NuGet package provider installed" -Level Success
-        } else {
-            Write-Log -Message "NuGet package provider is already installed" -Level Success
-        }
-        
-        # Set PSGallery as trusted
-        $psGallery = Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
-        if ($null -ne $psGallery -and $psGallery.InstallationPolicy -ne "Trusted") {
-            Write-Log -Message "Setting PSGallery as trusted repository..." -Level Info
-            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-            Write-Log -Message "PSGallery set as trusted" -Level Success
-        } else {
-            Write-Log -Message "PSGallery is already trusted" -Level Success
-        }
-        
-        # Install the module
-        Write-Log -Message "Installing ComputerManagementDsc module from PowerShell Gallery..." -Level Info
+        # Try to install using PowerShell Gallery
         try {
-            Install-Module -Name ComputerManagementDsc -Scope AllUsers -Force -AllowClobber -ErrorAction Stop
-            Write-Log -Message "ComputerManagementDsc module installed successfully" -Level Success
+            Write-Log -Message "Attempting to configure PackageManagement..." -Level Info
+            
+            # Force import of PackageManagement module
+            try {
+                Import-Module PackageManagement -Force -ErrorAction Stop
+                Write-Log -Message "PackageManagement module loaded" -Level Success
+            } catch {
+                Write-Log -Message "WARNING: Could not load PackageManagement module: $($_.Exception.Message)" -Level Warning
+                Write-Log -Message "Attempting alternative installation method..." -Level Warning
+            }
+            
+            # Install NuGet provider if needed (with error handling)
+            try {
+                $nugetProvider = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
+                if ($null -eq $nugetProvider) {
+                    Write-Log -Message "Installing NuGet package provider..." -Level Info
+                    Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope AllUsers -ErrorAction Stop | Out-Null
+                    Write-Log -Message "NuGet package provider installed" -Level Success
+                } else {
+                    Write-Log -Message "NuGet package provider is already installed" -Level Success
+                }
+            } catch {
+                Write-Log -Message "WARNING: Could not install NuGet provider: $($_.Exception.Message)" -Level Warning
+                Write-Log -Message "Trying to continue without NuGet provider..." -Level Warning
+            }
+            
+            # Set PSGallery as trusted
+            try {
+                $psGallery = Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
+                if ($null -ne $psGallery -and $psGallery.InstallationPolicy -ne "Trusted") {
+                    Write-Log -Message "Setting PSGallery as trusted repository..." -Level Info
+                    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction Stop
+                    Write-Log -Message "PSGallery set as trusted" -Level Success
+                } else {
+                    Write-Log -Message "PSGallery is already trusted" -Level Success
+                }
+            } catch {
+                Write-Log -Message "WARNING: Could not configure PSGallery: $($_.Exception.Message)" -Level Warning
+            }
+            
+            # Try Install-Module first
+            Write-Log -Message "Installing ComputerManagementDsc module from PowerShell Gallery..." -Level Info
+            try {
+                Install-Module -Name ComputerManagementDsc -Scope AllUsers -Force -AllowClobber -SkipPublisherCheck -ErrorAction Stop
+                Write-Log -Message "ComputerManagementDsc module installed successfully via Install-Module" -Level Success
+            } catch {
+                Write-Log -Message "WARNING: Install-Module failed: $($_.Exception.Message)" -Level Warning
+                Write-Log -Message "Attempting installation using PowerShell Core (pwsh)..." -Level Warning
+                
+                # Try using PowerShell Core as fallback
+                try {
+                    Write-Log -Message "Running Install-Module in PowerShell Core..." -Level Info
+                    $pwshInstall = & pwsh -NoProfile -Command "Install-Module -Name ComputerManagementDsc -Scope AllUsers -Force -AllowClobber -SkipPublisherCheck -ErrorAction Stop; Get-Module -ListAvailable -Name ComputerManagementDsc | Select-Object -First 1 | ConvertTo-Json" 2>&1
+                    
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Log -Message "ComputerManagementDsc module installed successfully via PowerShell Core" -Level Success
+                        Write-Log -Message "Module info: $pwshInstall" -Level Info
+                    } else {
+                        Write-Log -Message "WARNING: PowerShell Core installation failed: $pwshInstall" -Level Warning
+                        throw "Both Windows PowerShell and PowerShell Core installation methods failed"
+                    }
+                } catch {
+                    Write-Log -Message "ERROR: Failed to install ComputerManagementDsc module using all methods" -Level Error
+                    Write-Log -Message "Error: $($_.Exception.Message)" -Level Error
+                    Write-Log -Message "You may need to manually install: Install-Module ComputerManagementDsc -Scope AllUsers" -Level Error
+                    throw
+                }
+            }
         } catch {
             Write-Log -Message "ERROR: Failed to install ComputerManagementDsc module" -Level Error
             Write-Log -Message "Error: $($_.Exception.Message)" -Level Error
+            
+            # Provide detailed troubleshooting information
+            Write-Log -Message "`nTroubleshooting steps:" -Level Error
+            Write-Log -Message "1. Try manually: Install-Module ComputerManagementDsc -Scope CurrentUser" -Level Error
+            Write-Log -Message "2. Check PowerShell Gallery access: Find-Module ComputerManagementDsc" -Level Error
+            Write-Log -Message "3. Verify TLS 1.2: [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12" -Level Error
+            Write-Log -Message "4. Check internet connectivity to PowerShell Gallery" -Level Error
+            
             throw
         }
     } else {
         Write-Log -Message "ComputerManagementDsc module is already installed (Version: $($module.Version))" -Level Success
     }
+    
+    # Verify module is available (check in both Windows PowerShell and PowerShell Core locations)
+    Write-Log -Message "Verifying ComputerManagementDsc module availability..." -Level Info
+    $module = Get-Module -ListAvailable -Name "ComputerManagementDsc" | Select-Object -First 1
+    
+    if ($null -eq $module) {
+        Write-Log -Message "ERROR: Module not found after installation!" -Level Error
+        throw "ComputerManagementDsc module not available"
+    }
+    
+    Write-Log -Message "Module verified. Location: $($module.ModuleBase)" -Level Success
+    Write-Log -Message "Module version: $($module.Version)" -Level Info
     
     # Import the module to ensure it's available
     Write-Log -Message "Importing ComputerManagementDsc module..." -Level Info
@@ -430,7 +507,7 @@ try {
         Import-Module ComputerManagementDsc -Force -ErrorAction Stop
         Write-Log -Message "Module imported successfully" -Level Success
     } catch {
-        Write-Log -Message "WARNING: Could not import module: $($_.Exception.Message)" -Level Warning
+        Write-Log -Message "WARNING: Could not import module in Windows PowerShell: $($_.Exception.Message)" -Level Warning
         Write-Log -Message "Module may still work when called by DSC" -Level Warning
     }
     
