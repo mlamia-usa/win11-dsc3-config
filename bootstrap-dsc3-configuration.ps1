@@ -32,11 +32,11 @@
 
 .EXAMPLE
     # Run directly from GitHub (using Invoke-Expression)
-    irm https://raw.githubusercontent.com/yourorg/yourrepo/main/Bootstrap-DSCConfiguration.ps1 | iex
+    irm https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/bootstrap-dsc3-configuration.ps1 | iex
 
 .EXAMPLE
     # Run with custom configuration URL
-    .\Bootstrap-DSCConfiguration.ps1 -ConfigurationUrl "https://raw.githubusercontent.com/yourorg/yourrepo/main/custom-config.dsc.yaml"
+    .\Bootstrap-DSCConfiguration.ps1 -ConfigurationUrl "https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/custom-config.dsc.yaml"
 
 .EXAMPLE
     # Test configuration without making changes
@@ -53,7 +53,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [string]$ConfigurationUrl = "https://raw.githubusercontent.com/yourorg/yourrepo/main/timezone-config.dsc.yaml",
+    [string]$ConfigurationUrl = "https://raw.githubusercontent.com/mlamia-usa/win11-dsc3-config/main/timezone-config.dsc.yaml",
     
     [Parameter(Mandatory = $false)]
     [ValidateSet("Test", "Set", "Get")]

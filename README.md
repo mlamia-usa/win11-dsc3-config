@@ -40,7 +40,7 @@ This repository contains a Microsoft Desired State Configuration (DSC) 3.0 solut
 Run this single command from an **elevated PowerShell** prompt:
 
 ```powershell
-irm https://raw.githubusercontent.com/yourorg/yourrepo/main/Bootstrap-DSCConfiguration.ps1 | iex
+irm https://raw.githubusercontent.com/yourorg/yourrepo/main/bootstrap-dsc3-onfiguration.ps1 | iex
 ```
 
 **What This Does:**
@@ -54,13 +54,13 @@ If you prefer to review the script first:
 
 ```powershell
 # Download the bootstrap script
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/yourorg/yourrepo/main/Bootstrap-DSCConfiguration.ps1" -OutFile ".\Bootstrap-DSCConfiguration.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/yourorg/yourrepo/main/bootstrap-dsc3-onfiguration.ps1" -OutFile ".\bootstrap-dsc3-onfiguration.ps1"
 
 # Review the script (optional but recommended)
-Get-Content .\Bootstrap-DSCConfiguration.ps1
+Get-Content .\bootstrap-dsc3-onfiguration.ps1
 
 # Run the script
-.\Bootstrap-DSCConfiguration.ps1
+.\bootstrap-dsc3-onfiguration.ps1
 ```
 
 ### Option 3: Test Before Applying
@@ -68,7 +68,7 @@ Get-Content .\Bootstrap-DSCConfiguration.ps1
 To check what would change **without making changes**:
 
 ```powershell
-.\Bootstrap-DSCConfiguration.ps1 -Operation Test
+.\bootstrap-dsc3-onfiguration.ps1 -Operation Test
 ```
 
 ## 📖 Detailed Usage
@@ -76,11 +76,11 @@ To check what would change **without making changes**:
 ### Bootstrap Script Parameters
 
 ```powershell
-.\Bootstrap-DSCConfiguration.ps1 [Parameters]
+.\bootstrap-dsc3-onfiguration.ps1 [Parameters]
 
 -ConfigurationUrl <string>
     URL to the DSC configuration YAML file
-    Default: https://raw.githubusercontent.com/yourorg/yourrepo/main/TimeZone-Config.dsc.yaml
+    Default: https://raw.githubusercontent.com/yourorg/yourrepo/main/timezone-config.dsc.yaml
 
 -Operation <string>
     DSC operation to perform: Test, Set, or Get
@@ -98,35 +98,35 @@ To check what would change **without making changes**:
 
 **Test configuration without making changes:**
 ```powershell
-.\Bootstrap-DSCConfiguration.ps1 -Operation Test
+.\bootstrap-dsc3-onfiguration.ps1 -Operation Test
 ```
 
 **Apply configuration (default):**
 ```powershell
-.\Bootstrap-DSCConfiguration.ps1 -Operation Set
+.\bootstrap-dsc3-onfiguration.ps1 -Operation Set
 ```
 
 **Get current system state:**
 ```powershell
-.\Bootstrap-DSCConfiguration.ps1 -Operation Get
+.\bootstrap-dsc3-onfiguration.ps1 -Operation Get
 ```
 
 **Use custom configuration file:**
 ```powershell
-.\Bootstrap-DSCConfiguration.ps1 -ConfigurationUrl "https://raw.githubusercontent.com/yourorg/yourrepo/main/custom-config.dsc.yaml"
+.\bootstrap-dsc3-onfiguration.ps1 -ConfigurationUrl "https://raw.githubusercontent.com/yourorg/yourrepo/main/custom-config.dsc.yaml"
 ```
 
 **Custom log location:**
 ```powershell
-.\Bootstrap-DSCConfiguration.ps1 -LogPath "C:\Logs\DSC-Config.log"
+.\bootstrap-dsc3-onfiguration.ps1 -LogPath "C:\Logs\DSC-Config.log"
 ```
 
 ## 📁 Repository Structure
 
 ```
 .
-├── Bootstrap-DSCConfiguration.ps1   # Main bootstrap script
-├── TimeZone-Config.dsc.yaml         # DSC configuration document
+├── bootstrap-dsc3-onfiguration.ps1   # Main bootstrap script
+├── timezone-config.dsc.yaml         # DSC configuration document
 └── README.md                        # This file
 ```
 
@@ -212,7 +212,7 @@ Status: In desired state
 
 ## 📝 Configuration File Details
 
-### TimeZone-Config.dsc.yaml
+### timezone-config.dsc.yaml
 
 The configuration document is extensively commented and includes:
 
@@ -230,7 +230,7 @@ Common US timezones (run `tzutil /l` on Windows for full list):
 - `Central Standard Time` - US Central Region (Chicago)
 - `Eastern Standard Time` - US East Coast
 
-To change the timezone, edit the `TimeZone` property in `TimeZone-Config.dsc.yaml`:
+To change the timezone, edit the `TimeZone` property in `timezone-config.dsc.yaml`:
 
 ```yaml
 properties:
@@ -297,7 +297,7 @@ Get-Content C:\Windows\Temp\DSC-Bootstrap.log
 
 ### Adding More Resources
 
-To add additional configuration tasks, edit `TimeZone-Config.dsc.yaml` and add resources to the `resources` array:
+To add additional configuration tasks, edit `timezone-config.dsc.yaml` and add resources to the `resources` array:
 
 ```yaml
 resources:
